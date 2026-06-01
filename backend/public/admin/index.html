@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FeiTools 后台管理系统</title>
+  <!-- 引入 Element Plus 样式 -->
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+  <style>
+    :root {
+      --primary-color: #4f46e5;
+      --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: #f3f4f6;
+      color: #1f2937;
+    }
+    #app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    /* 登录页样式 */
+    .login-container {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: var(--bg-gradient);
+    }
+    .login-card {
+      width: 400px;
+      padding: 40px;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(10px);
+    }
+    .login-title {
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 24px;
+      font-weight: 700;
+      color: #312e81;
+    }
+    .login-btn {
+      width: 100%;
+      background: var(--primary-color) !important;
+      border-color: var(--primary-color) !important;
+    }
+    /* 管理页样式 */
+    .admin-layout {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    .admin-header {
+      background: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 24px;
+      height: 60px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+    .admin-logo {
+      font-size: 20px;
+      font-weight: 800;
+      background: var(--bg-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: 1px;
+    }
+    .admin-user {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .admin-container {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+    .admin-aside {
+      width: 220px;
+      background: #ffffff;
+      border-right: 1px solid #e5e7eb;
+    }
+    .admin-menu {
+      border-right: none !important;
+    }
+    .admin-main {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+      background-color: #f9fafb;
+    }
+    .page-card {
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- 1. 登录模块 -->
+    <div v-if="!isLoggedIn" class="login-container">
+      <div class="login-card">
+        <div class="login-title">FeiTools 后台登录</div>
+        <el-form :model="loginForm" label-position="top" @keyup.enter="handleLogin">
+          <el-form-item label="用户名">
+            <el-input v-model="loginForm.username" placeholder="请输入用户名" size="large"></el-input>
+          </el-form-item>
+          <el-form-item label="密码">
+            <el-input v-model="loginForm.password" type="password" placeholder="请输入密码" show-password size="large"></el-input>
+          </el-form-item>
+          <el-form-item style="margin-top: 30px;">
+            <el-button type="primary" class="login-btn" size="large" :loading="loginLoading" @click="handleLogin">登录</el-button>
+          </el-form-item>
+        </el-form>
+      </div>
+    </div>
+
+    <!-- 2. 后台管理布局 -->
+    <div v-else class="admin-layout">
+      <!-- 头部 -->
+      <header class="admin-header">
+        <div class="admin-logo">FeiTools 后台管理</div>
+        <div class="admin-user">
+          <el-tag type="success" effect="light">管理员: {{ loginForm.username || 'admin' }}</el-tag>
+          <el-button type="danger" size="small" link @click="handleLogout">退出登录</el-button>
+        </div>
+      </header>
+
+      <!-- 主体容器 -->
+      <div class="admin-container">
+        <!-- 侧边栏 -->
+        <aside class="admin-aside">
+          <el-menu :default-active="activeMenu" class="admin-menu" @select="handleMenuSelect">
+            <el-menu-item index="apis">
+              <span>🎬 影视解析接口</span>
+            </el-menu-item>
+            <el-menu-item index="sites">
+              <span>🌐 推荐影视站点</span>
+            </el-menu-item>
+            <el-menu-item index="platforms">
+              <span>🔍 视频搜索配置</span>
+            </el-menu-item>
+          </el-menu>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="admin-main">
+          <!-- A. 解析接口管理页 -->
+          <div v-if="activeMenu === 'apis'">
+            <el-card class="page-card">
+              <template #header>
+                <div class="card-header">
+                  <span style="font-weight: bold; font-size: 16px;">🎬 影视解析接口管理</span>
+                  <el-button type="primary" size="default" @click="openAddDialog('api')">添加解析接口</el-button>
+                </div>
+              </template>
+
+              <el-table :data="apiList" style="width: 100%" v-loading="loading">
+                <el-table-column prop="id" label="ID" width="80" align="center"></el-table-column>
+                <el-table-column prop="name" label="接口名称" width="180"></el-table-column>
+                <el-table-column prop="url" label="接口地址" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="sort_order" label="排序" width="100" align="center"></el-table-column>
+                <el-table-column label="启用状态" width="120" align="center">
+                  <template #default="scope">
+                    <el-switch 
+                      v-model="scope.row.status" 
+                      :active-value="1" 
+                      :inactive-value="0"
+                      @change="handleStatusChange('api', scope.row)">
+                    </el-switch>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="180" align="center">
+                  <template #default="scope">
+                    <div class="action-buttons">
+                      <el-button type="primary" size="small" link @click="openEditDialog('api', scope.row)">编辑</el-button>
+                      <el-button type="danger" size="small" link @click="handleDelete('api', scope.row.id)">删除</el-button>
+                    </div>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </el-card>
+          </div>
+
+          <!-- B. 导航站点管理页 -->
+          <div v-if="activeMenu === 'sites'">
+            <el-card class="page-card">
+              <template #header>
+                <div class="card-header">
+                  <span style="font-weight: bold; font-size: 16px;">🌐 推荐影视站点管理</span>
+                  <el-button type="primary" size="default" @click="openAddDialog('site')">添加导航站点</el-button>
+                </div>
+              </template>
+
+              <el-table :data="siteList" style="width: 100%" v-loading="loading">
+                <el-table-column prop="id" label="ID" width="80" align="center"></el-table-column>
+                <el-table-column prop="name" label="站点名称" width="180"></el-table-column>
+                <el-table-column prop="url" label="站点链接" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="sort_order" label="排序" width="100" align="center"></el-table-column>
+                <el-table-column label="启用状态" width="120" align="center">
+                  <template #default="scope">
+                    <el-switch 
+                      v-model="scope.row.status" 
+                      :active-value="1" 
+                      :inactive-value="0"
+                      @change="handleStatusChange('site', scope.row)">
+                    </el-switch>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="180" align="center">
+                  <template #default="scope">
+                    <div class="action-buttons">
+                      <el-button type="primary" size="small" link @click="openEditDialog('site', scope.row)">编辑</el-button>
+                      <el-button type="danger" size="small" link @click="handleDelete('site', scope.row.id)">删除</el-button>
+                    </div>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </el-card>
+          </div>
+
+          <!-- C. 搜索平台管理页 -->
+          <div v-if="activeMenu === 'platforms'">
+            <el-card class="page-card">
+              <template #header>
+                <div class="card-header">
+                  <span style="font-weight: bold; font-size: 16px;">🔍 视频搜索配置管理</span>
+                  <el-button type="primary" size="default" @click="openAddDialog('platform')">添加搜索平台</el-button>
+                </div>
+              </template>
+
+              <el-table :data="platformList" style="width: 100%" v-loading="loading">
+                <el-table-column prop="id" label="ID" width="80" align="center"></el-table-column>
+                <el-table-column prop="name" label="平台名称" width="180"></el-table-column>
+                <el-table-column prop="search_url" label="搜索链接模板" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="sort_order" label="排序" width="100" align="center"></el-table-column>
+                <el-table-column label="启用状态" width="120" align="center">
+                  <template #default="scope">
+                    <el-switch 
+                      v-model="scope.row.status" 
+                      :active-value="1" 
+                      :inactive-value="0"
+                      @change="handleStatusChange('platform', scope.row)">
+                    </el-switch>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="180" align="center">
+                  <template #default="scope">
+                    <div class="action-buttons">
+                      <el-button type="primary" size="small" link @click="openEditDialog('platform', scope.row)">编辑</el-button>
+                      <el-button type="danger" size="small" link @click="handleDelete('platform', scope.row.id)">删除</el-button>
+                    </div>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </el-card>
+          </div>
+        </main>
+      </div>
+
+      <!-- 添加/修改 弹窗 -->
+      <el-dialog 
+        v-model="dialogVisible" 
+        :title="dialogType === 'add' ? '新增数据' : '编辑数据'" 
+        width="500px">
+        <el-form :model="form" label-position="right" label-width="80px">
+          <el-form-item label="名称">
+            <el-input v-model="form.name" placeholder="例如: 某某解析 或 某某影视"></el-input>
+          </el-form-item>
+          <el-form-item :label="currentTarget === 'platform' ? '搜索模板' : '链接地址'">
+            <el-input 
+              v-model="form.url" 
+              :placeholder="currentTarget === 'platform' ? '例如: https://v.qq.com/x/search/?q=' : (currentTarget === 'api' ? '例如: https://jx.xmflv.com/?url=' : '例如: https://www.nbyy.cc/')"
+            ></el-input>
+          </el-form-item>
+          <el-form-item label="排序权重">
+            <el-input-number v-model="form.sort_order" :min="0" placeholder="数值越小越靠前"></el-input-number>
+          </el-form-item>
+          <el-form-item label="是否启用">
+            <el-radio-group v-model="form.status">
+              <el-radio :label="1">启用</el-radio>
+              <el-radio :label="0">禁用</el-radio>
+            </el-radio-group>
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <span class="dialog-footer">
+            <el-button @click="dialogVisible = false">取消</el-button>
+            <el-button type="primary" :loading="submitLoading" @click="handleSubmit">确定</el-button>
+          </span>
+        </template>
+      </el-dialog>
+    </div>
+  </div>
+
+  <!-- 引入 Vue 3, Element Plus 和 Axios -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://unpkg.com/element-plus/dist/index.full.js"></script>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+  <script>
+    const { createApp, ref, onMounted, reactive } = Vue;
+    const { ElMessage, ElMessageBox } = ElementPlus;
+
+    createApp({
+      setup() {
+        const isLoggedIn = ref(false);
+        const loginLoading = ref(false);
+        const loading = ref(false);
+        const submitLoading = ref(false);
+        const activeMenu = ref('apis');
+        
+        const loginForm = reactive({
+          username: '',
+          password: ''
+        });
+
+        const apiList = ref([]);
+        const siteList = ref([]);
+        const platformList = ref([]);
+
+        // 弹窗表单相关
+        const dialogVisible = ref(false);
+        const dialogType = ref('add'); // 'add' | 'edit'
+        const currentTarget = ref('api'); // 'api' | 'site' | 'platform'
+        const form = reactive({
+          id: null,
+          name: '',
+          url: '',
+          sort_order: 0,
+          status: 1
+        });
+
+        // 获取 Axios 实例并设置 Token 拦截器
+        const http = axios.create({
+          baseURL: ''
+        });
+        http.interceptors.request.use(config => {
+          const token = localStorage.getItem('feitools_token');
+          if (token) {
+            config.headers['Authorization'] = token;
+          }
+          return config;
+        });
+
+        // 检查登录状态
+        const checkLogin = () => {
+          const token = localStorage.getItem('feitools_token');
+          if (token) {
+            isLoggedIn.value = true;
+            fetchData();
+          }
+        };
+
+        // 登录
+        const handleLogin = async () => {
+          if (!loginForm.username || !loginForm.password) {
+            ElMessage.warning('请输入用户名和密码');
+            return;
+          }
+          loginLoading.value = true;
+          try {
+            const res = await http.post('/api/admin/login', loginForm);
+            if (res.data.code === 200) {
+              localStorage.setItem('feitools_token', res.data.data.token);
+              isLoggedIn.value = true;
+              ElMessage.success('登录成功');
+              fetchData();
+            }
+          } catch (err) {
+            ElMessage.error(err.response?.data?.msg || '登录失败，请检查网络或配置');
+          } finally {
+            loginLoading.value = false;
+          }
+        };
+
+        // 退出登录
+        const handleLogout = () => {
+          localStorage.removeItem('feitools_token');
+          isLoggedIn.value = false;
+          ElMessage.info('已退出登录');
+        };
+
+        // 切换菜单
+        const handleMenuSelect = (index) => {
+          activeMenu.value = index;
+          fetchData();
+        };
+
+        // 获取数据
+        const fetchData = async () => {
+          loading.value = true;
+          try {
+            if (activeMenu.value === 'apis') {
+              const res = await http.get('/api/admin/apis');
+              if (res.data.code === 200) apiList.value = res.data.data;
+            } else if (activeMenu.value === 'sites') {
+              const res = await http.get('/api/admin/sites');
+              if (res.data.code === 200) siteList.value = res.data.data;
+            } else if (activeMenu.value === 'platforms') {
+              const res = await http.get('/api/admin/platforms');
+              if (res.data.code === 200) platformList.value = res.data.data;
+            }
+          } catch (err) {
+            if (err.response?.status === 403) {
+              handleLogout();
+            } else {
+              ElMessage.error('获取数据失败');
+            }
+          } finally {
+            loading.value = false;
+          }
+        };
+
+        // 切换状态
+        const handleStatusChange = async (type, row) => {
+          try {
+            let endpoint = '';
+            const sendData = {
+              name: row.name,
+              status: row.status,
+              sort_order: row.sort_order
+            };
+
+            if (type === 'api') {
+              endpoint = `/api/admin/apis/${row.id}`;
+              sendData.url = row.url;
+            } else if (type === 'site') {
+              endpoint = `/api/admin/sites/${row.id}`;
+              sendData.url = row.url;
+              sendData.logo = row.logo;
+            } else if (type === 'platform') {
+              endpoint = `/api/admin/platforms/${row.id}`;
+              sendData.search_url = row.search_url;
+            }
+
+            await http.put(endpoint, sendData);
+            ElMessage.success('状态更新成功');
+          } catch (err) {
+            ElMessage.error('状态更新失败');
+            row.status = row.status === 1 ? 0 : 1; // 恢复旧状态
+          }
+        };
+
+        // 打开新增弹窗
+        const openAddDialog = (type) => {
+          currentTarget.value = type;
+          dialogType.value = 'add';
+          form.id = null;
+          form.name = '';
+          form.url = '';
+          form.sort_order = 0;
+          form.status = 1;
+          dialogVisible.value = true;
+        };
+
+        // 打开编辑弹窗
+        const openEditDialog = (type, row) => {
+          currentTarget.value = type;
+          dialogType.value = 'edit';
+          form.id = row.id;
+          form.name = row.name;
+          form.url = type === 'platform' ? row.search_url : row.url;
+          form.sort_order = row.sort_order;
+          form.status = row.status;
+          dialogVisible.value = true;
+        };
+
+        // 提交表单（新增/修改）
+        const handleSubmit = async () => {
+          if (!form.name || !form.url) {
+            ElMessage.warning('名称和链接地址不能为空');
+            return;
+          }
+          submitLoading.value = true;
+          try {
+            const isAdd = dialogType.value === 'add';
+            const type = currentTarget.value;
+            
+            let endpoint = '';
+            const sendData = {
+              name: form.name,
+              status: form.status,
+              sort_order: form.sort_order
+            };
+
+            if (type === 'api') {
+              endpoint = isAdd ? '/api/admin/apis' : `/api/admin/apis/${form.id}`;
+              sendData.url = form.url;
+            } else if (type === 'site') {
+              endpoint = isAdd ? '/api/admin/sites' : `/api/admin/sites/${form.id}`;
+              sendData.url = form.url;
+            } else if (type === 'platform') {
+              endpoint = isAdd ? '/api/admin/platforms' : `/api/admin/platforms/${form.id}`;
+              sendData.search_url = form.url; // 映射 url -> search_url
+            }
+
+            const method = isAdd ? 'post' : 'put';
+            await http[method](endpoint, sendData);
+            
+            ElMessage.success(isAdd ? '添加成功' : '修改成功');
+            dialogVisible.value = false;
+            fetchData();
+          } catch (err) {
+            ElMessage.error(err.response?.data?.msg || '操作失败');
+          } finally {
+            submitLoading.value = false;
+          }
+        };
+
+        // 删除数据
+        const handleDelete = (type, id) => {
+          ElMessageBox.confirm(
+            '确定要删除该项吗？删除后不可恢复！',
+            '警告',
+            {
+              confirmButtonText: '确定删除',
+              cancelButtonText: '取消',
+              type: 'warning',
+            }
+          ).then(async () => {
+            try {
+              let endpoint = '';
+              if (type === 'api') endpoint = `/api/admin/apis/${id}`;
+              else if (type === 'site') endpoint = `/api/admin/sites/${id}`;
+              else if (type === 'platform') endpoint = `/api/admin/platforms/${id}`;
+
+              await http.delete(endpoint);
+              ElMessage.success('删除成功');
+              fetchData();
+            } catch (err) {
+              ElMessage.error('删除失败');
+            }
+          }).catch(() => {});
+        };
+
+        onMounted(() => {
+          checkLogin();
+        });
+
+        return {
+          isLoggedIn,
+          loginLoading,
+          loading,
+          submitLoading,
+          activeMenu,
+          loginForm,
+          apiList,
+          siteList,
+          platformList,
+          dialogVisible,
+          dialogType,
+          form,
+          currentTarget,
+          handleLogin,
+          handleLogout,
+          handleMenuSelect,
+          handleStatusChange,
+          openAddDialog,
+          openEditDialog,
+          handleSubmit,
+          handleDelete
+        };
+      }
+    }).use(ElementPlus).mount('#app');
+  </script>
+</body>
+</html>

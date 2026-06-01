@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      var coverSupport = 'CSS' in window && 'supports' in window.CSS && 'supports' in window.CSS('position', 'sticky');
+      if (!coverSupport) {
+        document.write(
+          '<div id="browser-no-support" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 1999999; background: #fff; text-align: center; padding-top: 10%;"><div style="font-size: 20px; color: #333; margin-bottom: 20px;">您的浏览器版本过低，请升级浏览器</div><a href="https://browsehappy.com/" target="_blank" style="color: #4f46e5; text-decoration: underline;">升级浏览器</a></div>'
+        );
+      }
+    </script>
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, viewport-fit=cover" />
+    <title>FeiTools</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
