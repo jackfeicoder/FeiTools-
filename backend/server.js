@@ -11,13 +11,26 @@ app.use(cors()); // 允许跨域，方便本地开发 uni-app 联调
 app.use(express.json()); // 解析 JSON 格式的请求体
 app.use(express.static('public')); // 托管静态文件（用于托管管理端单页面）
 
+// 托管 H5 用户端前端静态文件，访问路径：/h5/
+const path = require('path');
+app.use('/h5', express.static(path.join(__dirname, 'h5')));
+// SPA 路由回退：所有 /h5/* 的请求都返回 index.html
+app.get('/h5/*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'h5', 'index.html'));
+});
+
 // ==========================================
 // 1. 管理端登录与身份验证
 // ==========================================
 
-const ADMIN_USER = process.env.ADMIN_USER || 'admin';
-const ADMIN_PASS = process.env.ADMIN_PASS || 'your-admin-password';
-const AUTH_TOKEN = 'your-auth-token'; // 简易Token，实际项目可用 JWT
+const ADMIN_USER = process.env.ADMIN_USER;
+const ADMIN_PASS = process.env.ADMIN_PASS;
+const AUTH_TOKEN = process.env.AUTH_TOKEN;
+
+if (!ADMIN_USER || !ADMIN_PASS || !AUTH_TOKEN) {
+  console.error('❌ 缺少 ADMIN_USER、ADMIN_PASS 或 AUTH_TOKEN。请复制 backend/.env.example 为 backend/.env 并填写本地密钥。');
+  process.exit(1);
+}
 
 // 管理员登录 API
 app.post('/api/admin/login', (req, res) => {
@@ -252,18 +265,18 @@ app.post('/api/client/wx-login', async (req, res) => {
   }
   
   // 实际微信登录开发流程：
-  // 1. 请求微信接口：https://api.weixin.qq.com/sns/jscode2session?appid=APPID&secret=SECRET&js_code=JSCODE&grant_type=authorization_code
+  // 1. 请求微信接口：https://api.weixin.qq.com/sns/jscode2session?appid=your-appid&secret=your-secret&js_code=JSCODE&grant_type=authorization_code
   // 2. 换取 openid 和 session_key
   // 这里为了本地快速开发/无AppID测试，我们在无法连上微信服务器时提供一个 Mock 的 openid
   try {
     // Mock 流程：直接以 code_openid 作为标识
-    const openid = `mock_openid_${code.substring(0, 10)}`;
+    const openid = `your-openid-${code.substring(0, 10)}`;
     res.json({
       code: 200,
       msg: '登录成功',
       data: {
         openid,
-        token: `client-token-${openid}`
+        token: `your-client-token-${openid}`
       }
     });
   } catch (err) {

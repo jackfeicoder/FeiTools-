@@ -1,6 +1,8 @@
 # 忽略依赖包目录
 node_modules/
 unpackage/
+backend/h5/
+*.zip
 
 # 忽略本地环境变量敏感配置 (包含数据库密码)
 .env

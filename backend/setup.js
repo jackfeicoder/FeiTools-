@@ -3,11 +3,9 @@ const path = require('path');
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
-// 常见本地 MySQL 密码组合
-const COMMON_PASSWORDS = ['', 'root', 'your-admin-password', 'your-admin-password78', 'admin', '1234'];
 const DB_HOST = '127.0.0.1';
 const DB_PORT = 3306;
-const DB_USER = 'root';
+const DB_USER = process.env.DB_USER || 'your-db-user';
 const DB_NAME = 'feitools_db';
 
 async function runSetup() {
@@ -17,8 +15,8 @@ async function runSetup() {
   let connection = null;
 
   // 1. 尝试使用现有的 .env 配置连接
-  const currentPass = process.env.DB_PASSWORD || 'root';
-  console.log(`正在尝试 .env 中的现有密码: "${currentPass}"...`);
+  const currentPass = process.env.DB_PASSWORD || '';
+  console.log('正在尝试 .env 中配置的数据库密码...');
   try {
     connection = await mysql.createConnection({
       host: DB_HOST,
@@ -30,42 +28,20 @@ async function runSetup() {
     activePassword = currentPass;
     console.log('✅ 使用现有的 .env 密码成功建立连接！');
   } catch (err) {
-    console.log('❌ 现有密码连接失败，开始尝试常见密码列表...');
+    console.log('❌ 使用 .env 配置连接失败。');
   }
 
-  // 2. 如果失败，尝试常用密码列表
-  if (!activePassword) {
-    for (const pwd of COMMON_PASSWORDS) {
-      if (pwd === currentPass) continue; // 已经试过了
-      console.log(`正在尝试常用密码: "${pwd}"...`);
-      try {
-        connection = await mysql.createConnection({
-          host: DB_HOST,
-          port: DB_PORT,
-          user: DB_USER,
-          password: pwd,
-          multipleStatements: true
-        });
-        activePassword = pwd;
-        console.log(`🎉 成功匹配到本地密码: "${pwd}"`);
-        break;
-      } catch (err) {
-        // 继续尝试下一个
-      }
-    }
-  }
-
-  // 3. 如果都失败了，报错并退出
+  // 2. 如果失败，报错并退出。不要在脚本里枚举或打印常见密码。
   if (!connection) {
     console.error('\n❌ 无法连接到本地 MySQL 服务。');
     console.error('可能的原因：');
     console.error('1. 您本地的 MySQL 服务没有启动。');
-    console.error('2. 本地 MySQL root 用户密码不在我们的自动探测列表里：["", "root", "your-admin-password", "your-admin-password78", "admin", "1234"]。');
+    console.error('2. backend/.env 中的 DB_PASSWORD 配置不正确。');
     console.error('\n请手动启动 MySQL，或在 backend/.env 中配置 DB_PASSWORD，然后手动导入 init.sql。');
     process.exit(1);
   }
 
-  // 4. 创建数据库
+  // 3. 创建数据库
   try {
     console.log(`正在创建数据库 ${DB_NAME} (若不存在)...`);
     await connection.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;`);
@@ -73,7 +49,7 @@ async function runSetup() {
     // 切换到 feitools_db 数据库
     await connection.query(`USE \`${DB_NAME}\`;`);
 
-    // 5. 读取并导入 SQL 脚本
+    // 4. 读取并导入 SQL 脚本
     console.log('正在读取并导入 init.sql 数据表结构...');
     const sqlPath = path.join(__dirname, 'init.sql');
     if (!fs.existsSync(sqlPath)) {
@@ -91,7 +67,7 @@ async function runSetup() {
     await connection.end();
   }
 
-  // 6. 自动更新 .env 文件
+  // 5. 自动更新 .env 文件
   try {
     console.log('正在更新 .env 配置文件...');
     const envPath = path.join(__dirname, '.env');
@@ -105,8 +81,8 @@ async function runSetup() {
       envContent = envContent.replace(/DB_NAME=.*/, `DB_NAME=${DB_NAME}`);
       envContent = envContent.replace(/DB_HOST=.*/, `DB_HOST=${DB_HOST}`);
     } else {
-      // 如果不存在则新建一个
-      envContent = `PORT=3000\nDB_HOST=${DB_HOST}\nDB_PORT=3306\nDB_USER=${DB_USER}\nDB_PASSWORD=${activePassword}\nDB_NAME=${DB_NAME}\nADMIN_USER=your-admin-user\nADMIN_PASS=your-admin-password\nJWT_SECRET=your-jwt-secret\n`;
+      // 如果不存在则新建一个，只写占位值，避免仓库或日志中出现真实密码。
+      envContent = `PORT=3000\nDB_HOST=${DB_HOST}\nDB_PORT=3306\nDB_USER=${DB_USER}\nDB_PASSWORD=${activePassword}\nDB_NAME=${DB_NAME}\nADMIN_USER=your-admin-user\nADMIN_PASS=your-admin-password\nAUTH_TOKEN=your-auth-token\n`;
     }
     
     fs.writeFileSync(envPath, envContent, 'utf8');

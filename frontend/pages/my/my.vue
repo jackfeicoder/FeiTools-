@@ -160,8 +160,8 @@ export default {
 
     // H5网页端的游客登录
     handleH5Login() {
-      const mockOpenid = 'h5_guest_' + Math.random().toString(36).substr(2, 9);
-      const mockToken = 'client-token-' + mockOpenid;
+      const mockOpenid = 'your-openid-' + Math.random().toString(36).substr(2, 9);
+      const mockToken = 'your-client-token-' + mockOpenid;
       uni.setStorageSync('client_token', mockToken);
       uni.setStorageSync('client_openid', mockOpenid);
       this.isLoggedIn = true;

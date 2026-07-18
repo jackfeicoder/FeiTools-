@@ -15,7 +15,7 @@
 
 ### 2. 后端服务 (`backend`)
 基于 **Node.js + Express + MySQL**，极致轻量，省内存。
-* 提供管理端登录认证（`your-admin-user / your-admin-password`，使用简易 Token 校验）。
+* 提供管理端登录认证，账号、密码和 Token 均通过环境变量配置。
 * 提供针对解析通道和推荐站点的完整 **CRUD (增删改查)** 接口。
 * 为客户端提供公开的 API，读取最新配置并自动过滤未启用的站点和接口。
 
@@ -59,7 +59,7 @@ FeiTools/
 ## 🚀 快速本地启动
 
 ### 后端服务启动
-1. 确保本地已启动 MySQL 数据库，并在 `backend/.env` 中正确配置您的数据库用户名和密码（当前配置：`root / your-db-password`）。
+1. 确保本地已启动 MySQL 数据库，复制 `backend/.env.example` 为 `backend/.env`，并填写您本机的数据库用户名、密码、管理员账号、管理员密码和 Token。
 2. 在终端进入 `backend` 目录，安装依赖：
    ```bash
    cd backend
@@ -74,6 +74,7 @@ FeiTools/
    node server.js
    ```
    * 启动成功后，浏览器访问 `http://localhost:3000/admin/index.html` 进入后台。
+   * 管理端账号、密码和认证 Token 请以您本地 `backend/.env` 为准，仓库不会提供明文默认密码。
 
 ### 客户端启动
 1. 打开 **HBuilderX**，选择“文件 -> 导入 -> 从本地目录导入”，导入 `frontend` 文件夹。
